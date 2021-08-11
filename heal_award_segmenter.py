@@ -26,7 +26,7 @@ def main():
         fieldnames.extend(list(result.keys()))
     fieldnames = list(set(fieldnames))
 
-    # Write flattened dicts to CSV
+    # Write flattened dicts to CSV - extra change
     with open('outputs/heal_awards.csv', 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
