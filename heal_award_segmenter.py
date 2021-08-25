@@ -1,12 +1,14 @@
 import csv
 import requests
 import collections
+import re
 
 def main():
     # Create Project Number List
     filepath = "inputs/awarded.csv"
-    project_num_list = create_project_num_list_from_csv(filepath)
+    project_num_list,core_project_num_list = create_project_num_list_from_csv(filepath) # add core project num list
     results = post_request(project_num_list)
+    pub_results = post_request(core_project_num_list, "publications/search")
 
     # Projects not in reporter
     projects_not_in_reporter = []
@@ -26,11 +28,22 @@ def main():
         fieldnames.extend(list(result.keys()))
     fieldnames = list(set(fieldnames))
 
-    # Write flattened dicts to CSV - extra change
+    # Write flattened results dicts to CSV
     with open('outputs/heal_awards.csv', 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for result in results_flat:
+            writer.writerow(result)
+
+    # Write publications results dicts to CSV
+    with open('outputs/heal_award_pubs.csv', 'w', newline='') as csvfile:
+        fieldnames = []
+        for result in pub_results:
+            fieldnames.extend(list(result.keys()))
+        fieldnames = list(set(fieldnames))
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for result in pub_results:
             writer.writerow(result)
 
 def create_project_num_list_from_txt(txt_filepath,header=True):
@@ -55,7 +68,7 @@ def create_project_num_list_from_txt(txt_filepath,header=True):
 def create_project_num_list_from_csv(csv_filepath):
     '''
     create_project_num_list_from_csv takes the 'awarded.csv' file from https://heal.nih.gov/funding/awarded
-    and returns a list object of project numbers.  For debugging purposes, it also
+    and returns 2 separate list objects of project numbers and core project numbers.  For debugging purposes, it also
     returns a list of project titles that do not have a project number associated.
     '''
     project_num_list = []
@@ -70,15 +83,19 @@ def create_project_num_list_from_csv(csv_filepath):
             else:
                 project_num_list.append(row['Project #'].strip())
         
-    
+    # Get core_project_num_list using re
+    core_project_num_list = list(map(lambda x: re.sub("^[0-9]+","",x), project_num_list)) # remove beginning
+    core_project_num_list = list(map(lambda x: re.sub("-[0-9]+$","",x), core_project_num_list)) # remove end
+
     # Write to projects
     with open("outputs/projects_with_missing_nums.txt", "w") as f:
         for title in missing_nums_list:
             f.write("%s\n" % title)
 
-    return(project_num_list)
 
-def post_request(project_num_list, chunk_length=50):
+    return(project_num_list,core_project_num_list)
+
+def post_request(project_num_list, end_point = "projects/search", chunk_length=50):
     '''
     post_request hits the NIH reporter API end point and returns a list of results.
     Currently, the request body is hardcoded.  We could abstract out if needed.
@@ -87,9 +104,11 @@ def post_request(project_num_list, chunk_length=50):
     
     # Initialize Results List
     results_list = []
+    criteria_name = "project_nums" if end_point == "projects/search" else "core_project_nums"
 
     # Request Details
-    url = "https://api.reporter.nih.gov/v2/projects/search"
+    base_url = "https://api.reporter.nih.gov/v2/"
+    url = f"{base_url}{end_point}"
     headers = {'Content-Type': 'application/json'}
 
     for i in range(0,len(project_num_list),chunk_length):
@@ -101,7 +120,7 @@ def post_request(project_num_list, chunk_length=50):
             "criteria":
             {
                 #"include_active_projects": "true",
-                "project_nums": projects
+                criteria_name: projects
             },
             "offset":0,
             "limit":chunk_length
