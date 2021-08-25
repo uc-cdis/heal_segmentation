@@ -36,6 +36,7 @@ Information about the API we use in this project can be found at the [NIH RePORT
 
 ## Outputs
 
-- `heal_awards.csv` - a list of the HEAL awards and associated information from the NIH RePORTER API
+- `heal_awards.csv` - a table of the HEAL awards and associated information from the NIH RePORTER API
+- `heal_awards_pubs.csv` - a table of publications associated with HEAL awards
 - `projects_not_in_reporter.txt` - a list of project numbers that do not return information from the NIH RePORTER API
 - `projects_with_missing_nums.txt` - a list of project titles that do not contain project numbers and thus are not queryable with the NIH RePORTER API
