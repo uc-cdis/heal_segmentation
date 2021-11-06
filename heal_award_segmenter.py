@@ -5,7 +5,7 @@ import re
 
 def main():
     # Create Project Number List
-    filepath = "inputs/awarded.csv"
+    filepath = "inputs/awarded_05_NOV_2021.csv"
     project_num_list,core_project_num_list = create_project_num_list_from_csv(filepath) # add core project num list
     results = post_request(project_num_list)
     pub_results = post_request(core_project_num_list, "publications/search")
@@ -17,7 +17,7 @@ def main():
         if project not in results_project_nums:
             projects_not_in_reporter.append(project)
 
-    with open("outputs/projects_not_in_reporter.txt", "w") as f:
+    with open("outputs/projects_not_in_reporter_05_NOV_2021.txt", "w") as f:
             for project in projects_not_in_reporter:
                 f.write("%s\n" % project)
 
@@ -29,14 +29,14 @@ def main():
     fieldnames = list(set(fieldnames))
 
     # Write flattened results dicts to CSV
-    with open('outputs/heal_awards.csv', 'w', newline='') as csvfile:
+    with open('outputs/heal_awards_05_NOV_2021.csv', 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for result in results_flat:
             writer.writerow(result)
 
     # Write publications results dicts to CSV
-    with open('outputs/heal_award_pubs.csv', 'w', newline='') as csvfile:
+    with open('outputs/heal_award_pubs_05_NOV_2021.csv', 'w', newline='') as csvfile:
         fieldnames = []
         for result in pub_results:
             fieldnames.extend(list(result.keys()))
@@ -78,17 +78,19 @@ def create_project_num_list_from_csv(csv_filepath):
     with open(csv_filepath) as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
+            project_number = re.sub(r'[^\x00-\x7F]', '',row['Project #']) # eliminate non UTF-8 characters
+            project_title = re.sub(r'[^\x00-\x7F]', '', row['Project Title']) # eliminate non UTF-8 characters
             if row['Project #'] == "":
-                missing_nums_list.append(row['Project Title'].strip())
+                missing_nums_list.append(project_title.strip())
             else:
-                project_num_list.append(row['Project #'].strip())
+                project_num_list.append(project_number.strip())
         
     # Get core_project_num_list using re
     core_project_num_list = list(map(lambda x: re.sub("^[0-9]+","",x), project_num_list)) # remove beginning
     core_project_num_list = list(map(lambda x: re.sub("-[0-9]+$","",x), core_project_num_list)) # remove end
 
     # Write to projects
-    with open("outputs/projects_with_missing_nums.txt", "w") as f:
+    with open("outputs/projects_with_missing_nums_05_NOV_2021.txt", "w") as f:
         for title in missing_nums_list:
             f.write("%s\n" % title)
 
