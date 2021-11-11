@@ -3,6 +3,9 @@
 This repository holds scripts, input data, and output data relevant to the HEAL award segmentation task for the NIH HEAL effort.  
 
 ## Updates
+Cleaned input data waas added on **11 NOV 2021**; new outputs appended with "_05_NOV_2021".
+Manually transformed IDs are shown in `inputs/corrected_project_ids_11_NOV_2021.csv`
+
 New input data was added on **05 NOV 2021**; new outputs appended with "_05_NOV_2021".
 
 ## Inputs
