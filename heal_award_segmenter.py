@@ -17,7 +17,7 @@ def main():
         if project not in results_project_nums:
             projects_not_in_reporter.append(project)
 
-    with open("outputs/projects_not_in_reporter_11_NOV_2021.txt", "w") as f:
+    with open("outputs/projects_not_in_reporter_06_DEC_2021.txt", "w") as f:
             for project in projects_not_in_reporter:
                 f.write("%s\n" % project)
 
@@ -29,14 +29,14 @@ def main():
     fieldnames = list(set(fieldnames))
 
     # Write flattened results dicts to CSV
-    with open('outputs/heal_awards_11_NOV_2021.csv', 'w', newline='') as csvfile:
+    with open('outputs/heal_awards_06_DEC_2021.csv', 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for result in results_flat:
             writer.writerow(result)
 
     # Write publications results dicts to CSV
-    with open('outputs/heal_award_pubs_11_NOV_2021.csv', 'w', newline='') as csvfile:
+    with open('outputs/heal_award_pubs_06_DEC_2021.csv', 'w', newline='') as csvfile:
         fieldnames = []
         for result in pub_results:
             fieldnames.extend(list(result.keys()))
@@ -87,10 +87,10 @@ def create_project_num_list_from_csv(csv_filepath):
         
     # Get core_project_num_list using re
     core_project_num_list = list(map(lambda x: re.sub("^[0-9]+","",x), project_num_list)) # remove beginning
-    core_project_num_list = list(map(lambda x: re.sub("-[0-9]+$","",x), core_project_num_list)) # remove end
+    core_project_num_list = list(map(lambda x: re.match(".+(?=-)|[^-]+",x).group(0), core_project_num_list)) # find last instance of '-' and remove.
 
     # Write to projects
-    with open("outputs/projects_with_missing_nums_11_NOV_2021.txt", "w") as f:
+    with open("outputs/projects_with_missing_nums_06_DEC_2021.txt", "w") as f:
         for title in missing_nums_list:
             f.write("%s\n" % title)
 
@@ -103,7 +103,9 @@ def post_request(project_num_list, end_point = "projects/search", chunk_length=5
     Currently, the request body is hardcoded.  We could abstract out if needed.
     We split up API requests in increments equal to 'chunk_length' to avoid errors.
     '''
-    
+    # Add Wildcard Search
+    #project_search_list = list(map(lambda x: re.match(".+(?=-)|[^-]+",x).group(0) + "*", project_num_list))
+
     # Initialize Results List
     results_list = []
     criteria_name = "project_nums" if end_point == "projects/search" else "core_project_nums"
@@ -111,10 +113,13 @@ def post_request(project_num_list, end_point = "projects/search", chunk_length=5
     # Request Details
     base_url = "https://api.reporter.nih.gov/v2/"
     url = f"{base_url}{end_point}"
-    headers = {'Content-Type': 'application/json'}
+    headers = {
+        'Content-Type': 'application/json',
+        'accept': 'application/json'
+        }
 
     for i in range(0,len(project_num_list),chunk_length):
-        projects = project_num_list[i:i+chunk_length-1]
+        projects = project_num_list[i:i+chunk_length]
 
         # Request Body
         request_body = {
@@ -125,7 +130,7 @@ def post_request(project_num_list, end_point = "projects/search", chunk_length=5
                 criteria_name: projects
             },
             "offset":0,
-            "limit":chunk_length
+            "limit":500
         }
 
         # Request Object
