@@ -1,12 +1,16 @@
-# heal_segmentation
+# NIH RePORTER Query Script
+This repository contains an input file, a python script, and a bash script which, when executed, reads the project IDs found in the input file, queries the NIH RePORTER API using these IDs, and outputs 4 files:
 
-This repository holds scripts, input data, and output data relevant to the HEAL award segmentation task for the NIH HEAL effort.  
+- `heal_awards.csv` - a table of the HEAL awards and associated information from the NIH RePORTER API
+- `heal_awards_pubs.csv` - a table of publications associated with HEAL awards
+- `projects_not_in_reporter.txt` - a list of project numbers that do not return information from the NIH RePORTER API
+- `projects_with_missing_nums.txt` - a list of project titles that do not contain project numbers and thus are not queryable with the NIH RePORTER API
 
 ## Updates
-Cleaned input data waas added on **11 NOV 2021**; new outputs appended with "_11_NOV_2021".
-Manually transformed IDs are shown in `inputs/corrected_project_ids_11_NOV_2021.csv`
 
-New input data was added on **05 NOV 2021**; new outputs appended with "_05_NOV_2021".
+### 17 DEC 2021
+This repository has been updated to now abstract out the `input file` (and corresponding `project_id` and `project_title` column names), `output path`, `output prefix` for the files.
+The script is executed using the 
 
 ## Inputs
 
@@ -16,8 +20,8 @@ Information about the API we use in this project can be found at the [NIH RePORT
 ## Considerations
 
 - The input data we work with here (namely, the list of HEAL projects) was last updated in March 2020.
-- Some of the project numbers from the input data CSV are blank, meaning we can't get information from the NIH RePORTER API.  See list [here](/outputs/projects_with_missing_nums.txt).
-- Some project numbers are valid, but do not appear to be in NIH RePORTER.  See list [here](/outputs/projects_not_in_reporter.txt).
+- Some of the project numbers from the input data CSV are blank, meaning we can't get information from the NIH RePORTER API.
+- Some project numbers are valid, but do not appear to be in NIH RePORTER.
 - There does not seem to be a hook within the NIH Reporter wherein we could look up HEAL studies, thus we rely on the aforementioned input list.
 
 ## Quick Start
@@ -27,6 +31,7 @@ Information about the API we use in this project can be found at the [NIH RePORT
 - pip
 - git
 - venv
+- bash
 
 ### Setup
 
@@ -36,9 +41,10 @@ Information about the API we use in this project can be found at the [NIH RePORT
   - `pip install --upgrade pip`
   - `pip install -r requirements.txt`
   
-### Run Script
+### Run Bash Script
 
-- At the command propmt, run `python3 heal_award_segmenter.py`
+- Review the bash script (`query_nih_reporter.sh`) to confirm the parameters are accurate
+- At the command prompt, run `bash query_nih_reporter.sh`
 
 ## Outputs
 
