@@ -2,11 +2,18 @@ import csv
 import requests
 import collections
 import re
+import argparse
 
-def main():
-    # Create Project Number List
-    filepath = "inputs/awarded_08_DEC_2021.csv"
-    project_num_list,core_project_num_list = create_project_num_list_from_csv(filepath) # add core project num list
+def main(args):
+    filepath = args.input_filepath
+    output_path = args.output_path
+    output_suffix = args.output_suffix
+    clean_non_utf = args.replace_non_utf
+    project_id = args.project_id_column
+    project_title = args.project_title_column
+
+    # Create Project Number List  
+    project_num_list,core_project_num_list = create_project_num_list_from_csv(filepath, output_path, output_suffix) # add core project num list
     results = post_request(project_num_list)
     pub_results = post_request(core_project_num_list, "publications/search")
 
@@ -17,11 +24,13 @@ def main():
         if project not in results_project_nums:
             projects_not_in_reporter.append(project)
 
-    with open("outputs/projects_not_in_reporter_08_DEC_2021.txt", "w") as f:
+    proj_not_in_reporter_file = f"{output_path}/projects_not_in_reporter_{output_suffix}.txt"
+
+    with open(proj_not_in_reporter_file, "w") as f:
             for project in projects_not_in_reporter:
                 f.write("%s\n" % project)
 
-    # Map flatten function to results
+    # Map flatten function to resultss
     results_flat = list(map(flatten_json, results))
     fieldnames = []
     for result in results_flat:
@@ -29,14 +38,17 @@ def main():
     fieldnames = list(set(fieldnames))
 
     # Write flattened results dicts to CSV
-    with open('outputs/heal_awards_08_DEC_2021.csv', 'w', newline='') as csvfile:
+    heal_awards_file = f"{output_path}/heal_awards_{output_suffix}.csv"
+    with open(heal_awards_file, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for result in results_flat:
             writer.writerow(result)
 
     # Write publications results dicts to CSV
-    with open('outputs/heal_award_pubs_08_DEC_2021.csv', 'w', newline='') as csvfile:
+    heal_pubs_file = f"{output_path}/heal_publications_{output_suffix}.csv"
+
+    with open(heal_pubs_file, 'w', newline='') as csvfile:
         fieldnames = []
         for result in pub_results:
             fieldnames.extend(list(result.keys()))
@@ -65,7 +77,7 @@ def create_project_num_list_from_txt(txt_filepath,header=True):
     
     return(project_num_list)
 
-def create_project_num_list_from_csv(csv_filepath):
+def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix):
     '''
     create_project_num_list_from_csv takes the 'awarded.csv' file from https://heal.nih.gov/funding/awarded
     and returns 2 separate list objects of project numbers and core project numbers.  For debugging purposes, it also
@@ -73,7 +85,7 @@ def create_project_num_list_from_csv(csv_filepath):
     '''
     project_num_list = []
     missing_nums_list = []
-    
+    missing_nums_file = f"{output_path}/project_with_missing_nums_{output_suffix}.txt"
 
     with open(csv_filepath) as csvfile:
         reader = csv.DictReader(csvfile)
@@ -90,7 +102,7 @@ def create_project_num_list_from_csv(csv_filepath):
     core_project_num_list = list(map(lambda x: re.match(".+(?=-)|[^-]+",x).group(0), core_project_num_list)) # find last instance of '-' and remove.
 
     # Write to projects
-    with open("outputs/projects_with_missing_nums_08_DEC_2021.txt", "w") as f:
+    with open(missing_nums_file, "w") as f:
         for title in missing_nums_list:
             f.write("%s\n" % title)
 
@@ -191,6 +203,13 @@ def merge_dict(dict_list):
     return(d_new)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Run script to query NIH RePORTER given Award IDs")
+    parser.add_argument('input_filepath', action="store", help ="Specify path to file (.csv) containing list of Award IDs")
+    parser.add_argument('output_path', action="store", help ="Specify absolute path for outputs")
+    parser.add_argument('output_suffix', action="store", help ="Specify suffix string for file outputs")
+    parser.add_argument('--project-id-column', dest="project_id_column", action="store", help = "Specify the column name in the file which contains the project ID")
+    parser.add_argument('--project-title-column', nargs="+", dest="project_title_column", action="store", help = "Specify the column name in the file which contains the project title")
+    parser.add_argument('-u', '--replace-non-utf', dest="replace_non_utf", action="store", help = "Replace non-utf-8 characters in Title and Abstracts (optional)" )
 
-
+    args = parser.parse_args()
+    main(args)
