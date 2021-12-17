@@ -10,7 +10,8 @@ This repository contains an input file, a python script, and a bash script which
 
 ### 17 DEC 2021
 This repository has been updated to now abstract out the `input file` (and corresponding `project_id` and `project_title` column names), `output path`, `output prefix` for the files.
-The script is executed using the 
+
+A user changes script parameters and executes the script in the `query_nih_reporter.sh` bash script.
 
 ## Inputs
 
@@ -26,6 +27,7 @@ Information about the API we use in this project can be found at the [NIH RePORT
 
 ## Quick Start
 ### Requirements
+It is assumed that those running this script are using Debian-flavored Linux and have bash installed.
 
 - Python 3.6+
 - pip
