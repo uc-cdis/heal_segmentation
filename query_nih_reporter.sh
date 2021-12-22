@@ -11,4 +11,4 @@ RUN_DATE="22_DEC_2021"
 mkdir $OUTPUT_BASE/outputs/$RUN_DATE
 
 # Generate files from NIH RePORTER - **EDIT HERE**
-python3 heal_award_segmenter.py $OUTPUT_BASE/inputs/awarded_08_DEC_2021.csv $OUTPUT_BASE/outputs/$RUN_DATE $RUN_DATE --project-id-column "proj_num" --project-title-column "proj_tittle"
+python3 heal_award_segmenter.py $OUTPUT_BASE/inputs/awarded_08_DEC_2021.csv $OUTPUT_BASE/outputs/$RUN_DATE $RUN_DATE --project-id-column "proj_num" --project-title-column "proj_tittle" --replace-non-utf

@@ -13,9 +13,9 @@ def main(args):
     project_title = args.project_title_column
 
     # Create Project Number List  
-    project_num_list,core_project_num_list = create_project_num_list_from_csv(filepath, output_path, output_suffix) # add core project num list
-    results = post_request(project_num_list)
-    pub_results = post_request(core_project_num_list, "publications/search")
+    project_num_list,core_project_num_list = create_project_num_list_from_csv(filepath, output_path, output_suffix, project_id, project_title) # add core project num list
+    results = post_request(clean_non_utf, project_num_list)
+    pub_results = post_request(clean_non_utf, core_project_num_list, "publications/search")
 
     # Projects not in reporter
     projects_not_in_reporter = []
@@ -77,7 +77,7 @@ def create_project_num_list_from_txt(txt_filepath,header=True):
     
     return(project_num_list)
 
-def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix):
+def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix, project_id_col, project_title_col):
     '''
     create_project_num_list_from_csv takes the 'awarded.csv' file from https://heal.nih.gov/funding/awarded
     and returns 2 separate list objects of project numbers and core project numbers.  For debugging purposes, it also
@@ -90,9 +90,9 @@ def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix):
     with open(csv_filepath) as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            project_number = re.sub(r'[^\x00-\x7F]', '',row['proj_num']).replace(" ","") # eliminate non UTF-8 characters
-            project_title = re.sub(r'[^\x00-\x7F]', '', row['proj_tittle']).replace(" ","") # eliminate non UTF-8 characters
-            if row['proj_num'] == "":
+            project_number = re.sub(r'[^\x00-\x7F]', '',row[project_id_col]).replace(" ","") # eliminate non UTF-8 characters
+            project_title = re.sub(r'[^\x00-\x7F]', '', row[project_title_col]) # eliminate non UTF-8 characters
+            if row[project_id_col] == "":
                 missing_nums_list.append(project_title.strip())
             else:
                 project_num_list.append(project_number.strip())
@@ -109,7 +109,7 @@ def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix):
 
     return(project_num_list,core_project_num_list)
 
-def post_request(project_num_list, end_point = "projects/search", chunk_length=50):
+def post_request(clean_non_utf, project_num_list, end_point = "projects/search", chunk_length=50):
     '''
     post_request hits the NIH reporter API end point and returns a list of results.
     Currently, the request body is hardcoded.  We could abstract out if needed.
@@ -151,9 +151,19 @@ def post_request(project_num_list, end_point = "projects/search", chunk_length=5
                             headers = headers, 
                             json = request_body)
 
-        # Append list of JSON results
-        results_list.extend(req.json()['results'])
-    
+        # Create results variable
+        results_obj = req.json()['results']
+
+        # Clean non-utf-8 chars if flag is set
+        if clean_non_utf:
+            for j in range(0,len(results_obj)):
+                for k,v in results_obj[j].items():
+                    if k == "abstract_text" or k == "project_title":
+                        results_obj[j][k] = re.sub(r'[^\x00-\x7F]',"",str(v))
+
+        # Extend list
+        results_list.extend(results_obj)
+
     return(results_list)
 
 def flatten_json(dictionary, parent_key=False, separator='.'):
@@ -208,8 +218,9 @@ if __name__ == "__main__":
     parser.add_argument('output_path', action="store", help ="Specify absolute path for outputs")
     parser.add_argument('output_suffix', action="store", help ="Specify suffix string for file outputs")
     parser.add_argument('--project-id-column', dest="project_id_column", action="store", help = "Specify the column name in the file which contains the project ID")
-    parser.add_argument('--project-title-column', nargs="+", dest="project_title_column", action="store", help = "Specify the column name in the file which contains the project title")
-    parser.add_argument('-u', '--replace-non-utf', dest="replace_non_utf", action="store", help = "Replace non-utf-8 characters in Title and Abstracts (optional)" )
-
+    parser.add_argument('--project-title-column', dest="project_title_column", action="store", help = "Specify the column name in the file which contains the project title")
+    parser.add_argument('--replace-non-utf', dest="replace_non_utf", action="store_true", help = "Replace non-utf-8 characters in Title and Abstracts (optional)" )
+    parser.add_argument('--keep_non-utf', dest='replace_non_utf', action='store_false', help = "DO NOT replace non-utf-8 characters in Title and Abstracts (optional)")
+    parser.set_defaults(replace_non_utf=True)
     args = parser.parse_args()
     main(args)
