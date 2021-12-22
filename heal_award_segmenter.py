@@ -159,7 +159,8 @@ def post_request(clean_non_utf, project_num_list, end_point = "projects/search",
             for j in range(0,len(results_obj)):
                 for k,v in results_obj[j].items():
                     if k == "abstract_text" or k == "project_title":
-                        results_obj[j][k] = re.sub(r'[^\x00-\x7F]',"",str(v))
+                        new_v = re.sub("\n"," ",re.sub(r'[^\x00-\x7F]',"",str(v))).strip()
+                        results_obj[j][k] = new_v
 
         # Extend list
         results_list.extend(results_obj)
