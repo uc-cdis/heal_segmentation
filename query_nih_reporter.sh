@@ -7,7 +7,7 @@ OUTPUT_BASE=$(dirname $FULL_PATH)
 echo "Base Directory: " $OUTPUT_BASE
 
 # Specify Run directory - **EDIT HERE**
-RUN_DATE="22_DEC_2021"
+RUN_DATE="04_JAN_2022"
 mkdir $OUTPUT_BASE/outputs/$RUN_DATE
 
 # Generate files from NIH RePORTER - **EDIT HERE**
