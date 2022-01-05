@@ -29,14 +29,15 @@ def main(args):
     with open(proj_not_in_reporter_file, "w") as f:
             for project in projects_not_in_reporter:
                 f.write("%s\n" % project)
-
+   
     # Map flatten function to resultss
     results_flat = list(map(flatten_json, results))
     fieldnames = []
     for result in results_flat:
         fieldnames.extend(list(result.keys()))
     fieldnames = list(set(fieldnames))
-
+    fieldnames.sort() # sort alphabetically
+    
     # Write flattened results dicts to CSV
     heal_awards_file = f"{output_path}/heal_awards_{output_suffix}.csv"
     with open(heal_awards_file, 'w', newline='') as csvfile:
@@ -157,15 +158,39 @@ def post_request(clean_non_utf, project_num_list, end_point = "projects/search",
         # Clean non-utf-8 chars if flag is set
         if clean_non_utf:
             for j in range(0,len(results_obj)):
+                # Convert to utf-8
+                results_obj[j] = utfy_dict(results_obj[j])
+                '''
                 for k,v in results_obj[j].items():
                     if k == "abstract_text" or k == "project_title":
                         new_v = re.sub(r'"',"'",re.sub(r'[^\x00-\x7F]',"",str(v))).strip()
                         results_obj[j][k] = new_v
+                '''
+                
 
         # Extend list
         results_list.extend(results_obj)
 
     return(results_list)
+
+def utfy_dict(dic):
+    if isinstance(dic,str):
+        dic = re.sub(r'[^\x00-\x7F]','',str(dic)).strip()
+        dic = re.sub(r'"',"'",dic)
+        dic = re.sub(r'\n','. ',dic)
+        return(dic)
+        #return(dic.encode("utf-8").decode())
+    elif isinstance(dic,dict):
+        for key in dic:
+            dic[key] = utfy_dict(dic[key])
+        return(dic)
+    elif isinstance(dic,list):
+        new_l = []
+        for e in dic:
+            new_l.append(utfy_dict(e))
+        return(new_l)
+    else:
+        return(dic)
 
 def flatten_json(dictionary, parent_key=False, separator='.'):
     # https://github.com/ScriptSmith/socialreaper/blob/master/socialreaper/tools.py
@@ -192,8 +217,8 @@ def flatten_json(dictionary, parent_key=False, separator='.'):
             elif isinstance(value[0], dict):
                 items.extend(flatten_json(merge_dict(value), new_key, separator).items()) #recurse
             else:
-                value = '; '.join(map(str,value))
-                items.append((new_key, value)) # append as tuple
+                value = ';'.join(map(str,value))
+                items.append((new_key, str(value))) # append as tuple
             
         else:
             items.append((new_key, value)) # append as tuple
