@@ -5,22 +5,24 @@ import re
 import argparse
 
 def main(args):
+    id_type = args.id_type
     filepath = args.input_filepath
     output_path = args.output_path
     output_suffix = args.output_suffix
     clean_non_utf = args.replace_non_utf
-    project_id = args.project_id_column
+    appl_id = args.appl_id_column
+    project_id = args.project_num_column
     project_title = args.project_title_column
 
     # Create Project Number List  
-    project_num_list,core_project_num_list = create_project_num_list_from_csv(filepath, output_path, output_suffix, project_id, project_title) # add core project num list
-    results = post_request(clean_non_utf, project_num_list)
-    pub_results = post_request(clean_non_utf, core_project_num_list, "publications/search")
+    id_list,core_id_list = create_project_num_list_from_csv(filepath, output_path, output_suffix, project_id, project_title) # add core project num list
+    results = post_request(clean_non_utf, id_list)
+    pub_results = post_request(clean_non_utf, core_id_list, "publications/search")
 
     # Projects not in reporter
     projects_not_in_reporter = []
     results_project_nums = [x['project_num'] for x in results]
-    for project in project_num_list:
+    for project in id_list:
         if project not in results_project_nums:
             projects_not_in_reporter.append(project)
 
@@ -240,10 +242,12 @@ def merge_dict(dict_list):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run script to query NIH RePORTER given Award IDs")
-    parser.add_argument('input_filepath', action="store", help ="Specify path to file (.csv) containing list of Award IDs")
+    parser.add_argument('id_type', action="store", help = "Specify ID type to use for the query - either 'appl_id' or 'project_num'")
+    parser.add_argument('input_filepath', action="store", help ="Specify path to file (.csv) containing list of IDs")
     parser.add_argument('output_path', action="store", help ="Specify absolute path for outputs")
     parser.add_argument('output_suffix', action="store", help ="Specify suffix string for file outputs")
-    parser.add_argument('--project-id-column', dest="project_id_column", action="store", help = "Specify the column name in the file which contains the project ID")
+    parser.add_argument('--appl-id-column', dest="appl_id_column", action="store", help = "Specify the column name in the file which contains the application ID (appl_id)")
+    parser.add_argument('--project-num-column', dest="project_num_column", action="store", help = "Specify the column name in the file which contains the project number")
     parser.add_argument('--project-title-column', dest="project_title_column", action="store", help = "Specify the column name in the file which contains the project title")
     parser.add_argument('--replace-non-utf', dest="replace_non_utf", action="store_true", help = "Replace non-utf-8 characters in Title and Abstracts (optional)" )
     parser.add_argument('--keep_non-utf', dest='replace_non_utf', action='store_false', help = "DO NOT replace non-utf-8 characters in Title and Abstracts (optional)")
