@@ -16,13 +16,13 @@ def main(args):
     # Create ID List to query  
     id_list,core_id_list = create_project_num_list_from_csv(filepath, output_path, output_suffix, id_type, project_id, project_title) # add core project num list
     results = post_request(clean_non_utf, id_type, id_list)
-    pub_results = post_request(clean_non_utf, core_id_list, "publications/search")
+    pub_results = post_request(clean_non_utf, id_type, core_id_list, "publications/search")
 
     # Projects not in reporter
     projects_not_in_reporter = []
-    results_project_nums = [x['project_num'] for x in results]
+    results_project_ids = [str(x[id_type]) for x in results]
     for project in id_list:
-        if project not in results_project_nums:
+        if str(project) not in results_project_ids:
             projects_not_in_reporter.append(project)
 
     proj_not_in_reporter_file = f"{output_path}/projects_not_in_reporter_{output_suffix}.txt"
