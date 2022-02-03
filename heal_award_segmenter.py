@@ -9,19 +9,20 @@ def main(args):
     output_path = args.output_path
     output_suffix = args.output_suffix
     clean_non_utf = args.replace_non_utf
+    id_type = args.id_type
     project_id = args.project_id_column
     project_title = args.project_title_column
 
-    # Create Project Number List  
-    project_num_list,core_project_num_list = create_project_num_list_from_csv(filepath, output_path, output_suffix, project_id, project_title) # add core project num list
-    results = post_request(clean_non_utf, project_num_list)
-    pub_results = post_request(clean_non_utf, core_project_num_list, "publications/search")
+    # Create ID List to query  
+    id_list,core_id_list = create_project_num_list_from_csv(filepath, output_path, output_suffix, id_type, project_id, project_title) # add core project num list
+    results = post_request(clean_non_utf, id_type, id_list)
+    pub_results = post_request(clean_non_utf, id_type, core_id_list, "publications/search")
 
     # Projects not in reporter
     projects_not_in_reporter = []
-    results_project_nums = [x['project_num'] for x in results]
-    for project in project_num_list:
-        if project not in results_project_nums:
+    results_project_ids = [str(x[id_type]) for x in results]
+    for project in id_list:
+        if str(project) not in results_project_ids:
             projects_not_in_reporter.append(project)
 
     proj_not_in_reporter_file = f"{output_path}/projects_not_in_reporter_{output_suffix}.txt"
@@ -61,6 +62,8 @@ def main(args):
 
 def create_project_num_list_from_txt(txt_filepath,header=True):
     '''
+    **PROBABLY CAN BE DEPRECATED 03 FEB 2022**
+    
     create_project_num_list_from_txt takes a newline-separated .txt file with 
     project numbers that may optionally have a header and returns a 
     list object of project numbers.
@@ -78,15 +81,15 @@ def create_project_num_list_from_txt(txt_filepath,header=True):
     
     return(project_num_list)
 
-def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix, project_id_col, project_title_col):
+def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix, id_type, project_id_col, project_title_col):
     '''
     create_project_num_list_from_csv takes the 'awarded.csv' file from https://heal.nih.gov/funding/awarded
     and returns 2 separate list objects of project numbers and core project numbers.  For debugging purposes, it also
     returns a list of project titles that do not have a project number associated.
     '''
-    project_num_list = []
-    missing_nums_list = []
-    missing_nums_file = f"{output_path}/project_with_missing_nums_{output_suffix}.txt"
+    project_id_list = []
+    missing_ids_list = []
+    missing_ids_file = f"{output_path}/project_with_missing_ids_{output_suffix}.txt"
 
     with open(csv_filepath) as csvfile:
         reader = csv.DictReader(csvfile)
@@ -94,23 +97,26 @@ def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix, p
             project_number = re.sub(r'[^\x00-\x7F]', '',row[project_id_col]).replace(" ","") # eliminate non UTF-8 characters
             project_title = re.sub(r'[^\x00-\x7F]', '', row[project_title_col]) # eliminate non UTF-8 characters
             if row[project_id_col] == "":
-                missing_nums_list.append(project_title.strip())
+                missing_ids_list.append(project_title.strip())
             else:
-                project_num_list.append(project_number.strip())
+                project_id_list.append(project_number.strip())
         
-    # Get core_project_num_list using re
-    core_project_num_list = list(map(lambda x: re.sub("^[0-9]+","",x), project_num_list)) # remove beginning
-    core_project_num_list = list(map(lambda x: re.match(".+(?=-)|[^-]+",x).group(0), core_project_num_list)) # find last instance of '-' and remove.
+    # Get core_project_num_list using re (if project nums)
+    if id_type == "project_num":
+        core_project_id_list = list(map(lambda x: re.sub("^[0-9]+","",x), project_id_list)) # remove beginning
+        core_project_id_list = list(map(lambda x: re.match(".+(?=-)|[^-]+",x).group(0), core_project_id_list)) # find last instance of '-' and remove.
+    else:
+        core_project_id_list = project_id_list
 
     # Write to projects
-    with open(missing_nums_file, "w") as f:
-        for title in missing_nums_list:
+    with open(missing_ids_file, "w") as f:
+        for title in missing_ids_list:
             f.write("%s\n" % title)
 
 
-    return(project_num_list,core_project_num_list)
+    return(project_id_list,core_project_id_list)
 
-def post_request(clean_non_utf, project_num_list, end_point = "projects/search", chunk_length=50):
+def post_request(clean_non_utf, id_type, project_id_list, end_point = "projects/search", chunk_length=50):
     '''
     post_request hits the NIH reporter API end point and returns a list of results.
     Currently, the request body is hardcoded.  We could abstract out if needed.
@@ -121,7 +127,16 @@ def post_request(clean_non_utf, project_num_list, end_point = "projects/search",
 
     # Initialize Results List
     results_list = []
-    criteria_name = "project_nums" if end_point == "projects/search" else "core_project_nums"
+    
+    # Choosing which IDs to use
+    if id_type == "appl_id":
+        criteria_name = "appl_ids"
+    else:
+        # assumes project_num if not appl_id
+        if end_point == "projects/search":
+            criteria_name = "project_nums"
+        else:
+            criteria_name = "core_project_nums"
 
     # Request Details
     base_url = "https://api.reporter.nih.gov/v2/"
@@ -131,8 +146,8 @@ def post_request(clean_non_utf, project_num_list, end_point = "projects/search",
         'accept': 'application/json'
         }
 
-    for i in range(0,len(project_num_list),chunk_length):
-        projects = project_num_list[i:i+chunk_length]
+    for i in range(0,len(project_id_list),chunk_length):
+        projects = project_id_list[i:i+chunk_length]
 
         # Request Body
         request_body = {
@@ -240,10 +255,11 @@ def merge_dict(dict_list):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run script to query NIH RePORTER given Award IDs")
-    parser.add_argument('input_filepath', action="store", help ="Specify path to file (.csv) containing list of Award IDs")
+    parser.add_argument('id_type', action="store", help = "Specify ID type to use for the query - either 'appl_id' or 'project_num'")
+    parser.add_argument('input_filepath', action="store", help ="Specify path to file (.csv) containing list of IDs")
     parser.add_argument('output_path', action="store", help ="Specify absolute path for outputs")
     parser.add_argument('output_suffix', action="store", help ="Specify suffix string for file outputs")
-    parser.add_argument('--project-id-column', dest="project_id_column", action="store", help = "Specify the column name in the file which contains the project ID")
+    parser.add_argument('--project-id-column', dest="project_id_column", action="store", help = "Specify the column name in the file which contains the ID (application ID or project number)")
     parser.add_argument('--project-title-column', dest="project_title_column", action="store", help = "Specify the column name in the file which contains the project title")
     parser.add_argument('--replace-non-utf', dest="replace_non_utf", action="store_true", help = "Replace non-utf-8 characters in Title and Abstracts (optional)" )
     parser.add_argument('--keep_non-utf', dest='replace_non_utf', action='store_false', help = "DO NOT replace non-utf-8 characters in Title and Abstracts (optional)")
