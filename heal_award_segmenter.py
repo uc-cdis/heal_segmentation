@@ -101,6 +101,9 @@ def create_project_num_list_from_csv(csv_filepath, output_path, output_suffix, i
             else:
                 project_id_list.append(project_number.strip())
         
+    # Make id list unique
+    project_id_list = list(set(project_id_list))
+    
     # Get core_project_num_list using re (if project nums)
     if id_type == "project_num":
         core_project_id_list = list(map(lambda x: re.sub("^[0-9]+","",x), project_id_list)) # remove beginning

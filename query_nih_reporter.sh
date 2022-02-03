@@ -14,4 +14,4 @@ mkdir $OUTPUT_BASE/outputs/$RUN_DATE
 python3 heal_award_segmenter.py "appl_id" $OUTPUT_BASE/inputs/HEAL_FY1821.csv $OUTPUT_BASE/outputs/$RUN_DATE $RUN_DATE --project-id-column "Appl ID" --project-title-column "Title" --replace-non-utf
 
 # Generate files from NIH RePORTER project_nums
-# project here
+#python3 heal_award_segmenter.py "project_num" $OUTPUT_BASE/inputs/HEAL_FY1821.csv $OUTPUT_BASE/outputs/$RUN_DATE $RUN_DATE --project-id-column "Full Grant Number" --project-title-column "Title" --replace-non-utf
