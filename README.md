@@ -42,7 +42,7 @@ It is assumed that those running this script are using Debian-flavored Linux and
 ### Setup
 
 - Clone the repository `git clone https://github.com/jcheadle-rti/heal_segmentation.git`
-- Create and activate the virtual environment `python3 -m venv venv`
+- Create and activate the virtual environment `python3 -m venv venv`; `source venv/bin/activate`
 - Update pip and install required packages
   - `pip install --upgrade pip`
   - `pip install -r requirements.txt`
