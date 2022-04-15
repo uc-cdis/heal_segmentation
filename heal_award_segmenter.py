@@ -9,6 +9,7 @@ def main(args):
     output_path = args.output_path
     output_suffix = args.output_suffix
     clean_non_utf = args.replace_non_utf
+    return_related_project_nums = args.return_related_project_nums
     id_type = args.id_type
     project_id = args.project_id_column
     project_title = args.project_title_column
@@ -17,6 +18,15 @@ def main(args):
     id_list,core_id_list = create_project_num_list_from_csv(filepath, output_path, output_suffix, id_type, project_id, project_title) # add core project num list
     results = post_request(clean_non_utf, id_type, id_list)
     pub_results = post_request(clean_non_utf, id_type, core_id_list, "publications/search")
+    
+    # Add related project_nums
+    if (id_type == 'appl_id') & return_related_project_nums:
+        additional_id_list, additional_core_id_list = create_project_num_list_from_csv(filepath, output_path, output_suffix, "project_num", "Full Grant Number", project_title)
+        additional_results = post_request(clean_non_utf, "project_num", additional_id_list)
+        for addl_result in additional_results:
+            if str(addl_result['appl_id']) not in id_list:
+                addl_result['_second_search_flag'] = 1 # To understand which we returned from our secondary search
+                results.append(addl_result)
 
     # Projects not in reporter
     projects_not_in_reporter = []
@@ -183,9 +193,7 @@ def post_request(clean_non_utf, id_type, project_id_list, end_point = "projects/
                     if k == "abstract_text" or k == "project_title":
                         new_v = re.sub(r'"',"'",re.sub(r'[^\x00-\x7F]',"",str(v))).strip()
                         results_obj[j][k] = new_v
-                '''
-                
-
+                '''        
         # Extend list
         results_list.extend(results_obj)
 
@@ -265,7 +273,8 @@ if __name__ == "__main__":
     parser.add_argument('--project-id-column', dest="project_id_column", action="store", help = "Specify the column name in the file which contains the ID (application ID or project number)")
     parser.add_argument('--project-title-column', dest="project_title_column", action="store", help = "Specify the column name in the file which contains the project title")
     parser.add_argument('--replace-non-utf', dest="replace_non_utf", action="store_true", help = "Replace non-utf-8 characters in Title and Abstracts (optional)" )
+    parser.add_argument('--return-related-project-nums', dest="return_related_project_nums_utf", action="store_true", help = "When searching by appl_id, do a second search for project_num" )
     parser.add_argument('--keep_non-utf', dest='replace_non_utf', action='store_false', help = "DO NOT replace non-utf-8 characters in Title and Abstracts (optional)")
-    parser.set_defaults(replace_non_utf=True)
+    parser.set_defaults(replace_non_utf=True, return_related_project_nums=True)
     args = parser.parse_args()
     main(args)
