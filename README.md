@@ -7,7 +7,10 @@ This repository contains an input file, a python script, and a bash script which
 - `projects_with_missing_nums.txt` - a list of project titles that do not contain project numbers and thus are not queryable with the NIH RePORTER API
 
 ## Updates
-### 03 FEB 2021
+### 15 APR 2022
+Code has been updated to optionally pull all `project_num`s that are associated with `appl_id`s.  Note: `appl_id`s uniquely identify records, whereas `project_num`s do not - For a center grant such as the [MAARC grant](https://reporter.nih.gov/search/t-GGFEmjBEeaJeCNqZEHDg/project-details/9882805#sub-Projects), the `project_num` (1U2CDA050098-01) is identical to the Survey, Data, methods, and Administrative Core grants
+
+### 03 FEB 2022
 This repository has been updated to allow for input IDs to be either `appl_id`s or `project_num`s.  It is highly recommended to use `appl_id`s where possible due to the ambiguity with naming conventions of `project_num`s.
 
 ### 17 DEC 2021
