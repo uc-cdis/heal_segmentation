@@ -11,7 +11,7 @@ echo "Base Directory: " $OUTPUT_BASE
 mkdir -p $OUTPUT_BASE/outputs
 
 # Generate files from NIH RePORTER appl_ids
-python3 heal_award_segmenter.py "appl_id" $OUTPUT_BASE/inputs/HEAL_FY1821_short.csv $OUTPUT_BASE/outputs/ "short" --input_awarded_filepath $OUTPUT_BASE/inputs/awarded.csv --gen3_field_mapping_filepath $OUTPUT_BASE/inputs/field_mappings.json --project-id-column "Appl ID" --project-title-column "Title" --replace-non-utf  --add-gen3-authz-value
+python3 heal_award_segmenter.py "appl_id" $OUTPUT_BASE/inputs/HEAL_FY1821.csv $OUTPUT_BASE/outputs/ "short" --input_awarded_filepath $OUTPUT_BASE/inputs/awarded.csv --gen3_field_mapping_filepath $OUTPUT_BASE/inputs/field_mappings.json --project-id-column "Appl ID" --project-title-column "Title" --replace-non-utf  --add-gen3-authz-value
 # python3 heal_award_segmenter.py "appl_id" $OUTPUT_BASE/inputs/HEAL_FY1821.csv $OUTPUT_BASE/outputs/$RUN_DATE $RUN_DATE --project-id-column "Appl ID" --project-title-column "Title" --replace-non-utf
 
 # Generate files from NIH RePORTER project_nums
