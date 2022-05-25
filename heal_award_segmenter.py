@@ -336,14 +336,18 @@ def flatten_json(dictionary, parent_key=False, separator=".", gen3_field_mapping
         new_key = str(parent_key) + separator + key if parent_key else key
 
         if isinstance(value, collections.MutableMapping):
-            items.extend(flatten_json(value, new_key, separator).items())  # recurse
+            items.extend(
+                flatten_json(value, new_key, separator, gen3_field_mapping).items()
+            )  # recurse
 
         elif isinstance(value, list):
             if not value:  # skip list if empty
                 continue
             elif isinstance(value[0], dict):
                 items.extend(
-                    flatten_json(merge_dict(value), new_key, separator).items()
+                    flatten_json(
+                        merge_dict(value), new_key, separator, gen3_field_mapping
+                    ).items()
                 )  # recurse
             else:
                 value = "; ".join(map(str, value))
