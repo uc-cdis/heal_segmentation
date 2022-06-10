@@ -50,7 +50,11 @@ def main(args):
             project_title,
         )
         additional_results = post_request(
-            clean_non_utf, "project_num", additional_id_list
+            clean_non_utf,
+            "project_num",
+            additional_id_list,
+            add_gen3_authz=add_gen3_authz,
+            awarded_dict=awarded_dict,
         )
         for addl_result in additional_results:
             if str(addl_result["appl_id"]) not in id_list:
@@ -287,7 +291,7 @@ def post_request(
         if awarded_dict:
             for res_obj in results_obj:
                 project_num = res_obj["project_num"]
-                if project_num in awarded_dict:
+                if project_num in awarded_dict.keys():
                     res_obj["summary"] = awarded_dict[project_num]["summary"]
                     res_obj["research_focus_area"] = awarded_dict[project_num][
                         "research_focus_area"
