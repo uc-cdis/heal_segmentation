@@ -9,6 +9,7 @@ import argparse
 def main(args):
     filepath = args.input_filepath
     awarded_filepath = args.input_awarded_filepath
+    mds_dump_filepath = args.input_mds_dump_filepath
     gen3_field_mapping_filepath = args.gen3_field_mapping_filepath
     output_path = args.output_path
     output_suffix = args.output_suffix
@@ -19,10 +20,31 @@ def main(args):
     project_id = args.project_id_column
     project_title = args.project_title_column
 
+    num_tags = 16
+    num_datasets = 5
+    mds_fields_to_copy = [
+        "__manifest",
+        "authz",
+        "advSearchFilters",
+        "data_availability",
+        "dataset_category",
+        "dataset_description",
+    ]
+    for x in range(num_tags):
+        mds_fields_to_copy.append(f"_tag_{x}")
+    for x in range(1, num_datasets + 1):
+        mds_fields_to_copy.append(f"dataset_{x}_description")
+        mds_fields_to_copy.append(f"dataset_{x}_title")
+        mds_fields_to_copy.append(f"dataset_{x}_type")
+
     awarded_dict = {}
     if awarded_filepath:
         print("Create awarded dict")
         awarded_dict = create_awarded_dict_from_csv(awarded_filepath)
+    mds_dict = {}
+    if mds_dump_filepath:
+        print("Create mds dict")
+        mds_dict = create_mds_dict_from_csv(mds_dump_filepath, mds_fields_to_copy)
     # Create ID List to query
     print("Create project list")
     id_list, core_id_list = create_project_num_list_from_csv(
@@ -35,6 +57,8 @@ def main(args):
         id_list,
         add_gen3_authz=add_gen3_authz,
         awarded_dict=awarded_dict,
+        mds_dict=mds_dict,
+        mds_fields_to_copy=mds_fields_to_copy,
     )
     # print("Query NIH for publications")
     # pub_results = post_request(clean_non_utf, id_type, core_id_list, "publications/search", add_gen3_authz=add_gen3_authz)
@@ -165,6 +189,30 @@ def create_awarded_dict_from_csv(awarded_csv_filepath):
     return awarded_dict
 
 
+def create_mds_dict_from_csv(mds_csv_filepath, mds_fields_to_copy=[]):
+    with open(mds_csv_filepath) as csvfile:
+        reader = csv.DictReader(
+            csvfile,
+            delimiter="\t",
+            quotechar="",
+            quoting=csv.QUOTE_NONE,
+            escapechar="\\",
+        )
+        mds_fields_dict = {}
+        for row in reader:
+            if row["guid"]:
+                project_number = (
+                    re.sub(r"[^\x00-\x7F]", "", row["guid"]).replace(" ", "").strip()
+                )  # eliminate non UTF-8 characters
+                for field_title in mds_fields_to_copy:
+                    field_value = re.sub(r"[^\x00-\x7F]", "", row[field_title])
+                    if not project_number in mds_fields_dict:
+                        mds_fields_dict[project_number] = {}
+                    mds_fields_dict[project_number][field_title] = field_value
+
+    return mds_fields_dict
+
+
 def create_project_num_list_from_csv(
     csv_filepath, output_path, output_suffix, id_type, project_id_col, project_title_col
 ):
@@ -221,6 +269,8 @@ def post_request(
     chunk_length=50,
     add_gen3_authz=False,
     awarded_dict={},
+    mds_dict={},
+    mds_fields_to_copy=[],
 ):
     """
     post_request hits the NIH reporter API end point and returns a list of results.
@@ -265,7 +315,7 @@ def post_request(
         # Request Object
         print(f"Querying {url}")
         req = requests.request(
-            method="POST", url=url, headers=headers, json=request_body, timeout=15
+            method="POST", url=url, headers=headers, json=request_body, timeout=60
         )
 
         # Create results variable
@@ -286,7 +336,9 @@ def post_request(
 
         if add_gen3_authz and end_point == "projects/search":
             for res_obj in results_obj:
-                res_obj["registration_authz"] = f"/study/{res_obj[id_type]}"
+                res_obj[
+                    "registration_authz"
+                ] = f"/study/{res_obj['appl_id']}"  # always use appl_id to create this
 
         if awarded_dict:
             for res_obj in results_obj:
@@ -296,6 +348,13 @@ def post_request(
                     res_obj["research_focus_area"] = awarded_dict[project_num][
                         "research_focus_area"
                     ]
+
+        if mds_dict and mds_fields_to_copy:
+            for res_obj in results_obj:
+                project_num = res_obj["project_num"]
+                if project_num in mds_dict.keys():
+                    for field_title in mds_fields_to_copy:
+                        res_obj[field_title] = mds_dict[project_num][field_title]
 
         # Extend list
         results_list.extend(results_obj)
@@ -418,6 +477,12 @@ if __name__ == "__main__":
         dest="input_awarded_filepath",
         action="store",
         help="Specify path to file (.csv) containing list of summaries",
+    )
+    parser.add_argument(
+        "--input_mds_dump_filepath",
+        dest="input_mds_dump_filepath",
+        action="store",
+        help="Specify path to file (.csv) containing list of MDS dump data",
     )
     parser.add_argument(
         "--gen3_field_mapping_filepath",
