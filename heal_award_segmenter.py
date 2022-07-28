@@ -6,6 +6,19 @@ import re
 import argparse
 
 
+num_tags = 16
+num_datasets = 5
+mds_fields_to_copy = [
+    "__manifest",
+    "authz",
+    "advSearchFilters",
+    "data_availability",
+    "dataset_category",
+    "dataset_description",
+]
+fields_exclude_from_stringify = ["appl_id", "advSearchFilters"]
+
+
 def main(args):
     filepath = args.input_filepath
     awarded_filepath = args.input_awarded_filepath
@@ -20,16 +33,6 @@ def main(args):
     project_id = args.project_id_column
     project_title = args.project_title_column
 
-    num_tags = 16
-    num_datasets = 5
-    mds_fields_to_copy = [
-        "__manifest",
-        "authz",
-        "advSearchFilters",
-        "data_availability",
-        "dataset_category",
-        "dataset_description",
-    ]
     for x in range(num_tags):
         mds_fields_to_copy.append(f"_tag_{x}")
     for x in range(1, num_datasets + 1):
@@ -44,7 +47,7 @@ def main(args):
     mds_dict = {}
     if mds_dump_filepath:
         print("Create mds dict")
-        mds_dict = create_mds_dict_from_csv(mds_dump_filepath, mds_fields_to_copy)
+        mds_dict = create_mds_dict_from_csv(mds_dump_filepath)
     # Create ID List to query
     print("Create project list")
     id_list, core_id_list = create_project_num_list_from_csv(
@@ -58,7 +61,6 @@ def main(args):
         add_gen3_authz=add_gen3_authz,
         awarded_dict=awarded_dict,
         mds_dict=mds_dict,
-        mds_fields_to_copy=mds_fields_to_copy,
     )
     # print("Query NIH for publications")
     # pub_results = post_request(clean_non_utf, id_type, core_id_list, "publications/search", add_gen3_authz=add_gen3_authz)
@@ -189,7 +191,7 @@ def create_awarded_dict_from_csv(awarded_csv_filepath):
     return awarded_dict
 
 
-def create_mds_dict_from_csv(mds_csv_filepath, mds_fields_to_copy=[]):
+def create_mds_dict_from_csv(mds_csv_filepath):
     with open(mds_csv_filepath) as csvfile:
         reader = csv.DictReader(
             csvfile,
@@ -270,7 +272,6 @@ def post_request(
     add_gen3_authz=False,
     awarded_dict={},
     mds_dict={},
-    mds_fields_to_copy=[],
 ):
     """
     post_request hits the NIH reporter API end point and returns a list of results.
@@ -416,12 +417,17 @@ def flatten_json(dictionary, parent_key=False, separator=".", gen3_field_mapping
                 value = "; ".join(map(str, value))
                 if new_key in gen3_field_mapping:
                     new_key = gen3_field_mapping[new_key]
-                items.append((new_key, str(value)))  # append as tuple
+                items.append((new_key, f'"{str(value)}"'))  # append as tuple
 
         else:
             if new_key in gen3_field_mapping:
                 new_key = gen3_field_mapping[new_key]
-            items.append((new_key, value))  # append as tuple
+            if new_key in fields_exclude_from_stringify:
+                items.append((new_key, value))  # append as tuple
+            else:
+                items.append(
+                    (new_key, f'"{str(value)}"')
+                )  # append as tuple, convert to string to handle fields with mixed types (number/string), so Gen3 AggMDS sync can work
     return dict(items)
 
 
