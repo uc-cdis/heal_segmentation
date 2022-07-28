@@ -133,7 +133,6 @@ def main(args):
 
     # # Write publications results dicts to CSV
     # heal_pubs_file = f"{output_path}/heal_publications_{output_suffix}.csv"
-
     # with open(heal_pubs_file, 'w', newline='') as csvfile:
     #     fieldnames = []
     #     for result in pub_results:
