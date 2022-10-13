@@ -46,7 +46,7 @@ def main(args):
         awarded_dict = create_awarded_dict_from_csv(awarded_filepath)
     mds_dict = {}
     if mds_dump_filepath:
-        print("Create mds dict")
+        print("Create MDS dict")
         mds_dict = create_mds_dict_from_csv(mds_dump_filepath)
     # Create ID List to query
     print("Create project list")
@@ -59,13 +59,12 @@ def main(args):
         id_type,
         id_list,
         add_gen3_authz=add_gen3_authz,
-        awarded_dict=awarded_dict,
-        mds_dict=mds_dict,
     )
     # print("Query NIH for publications")
     # pub_results = post_request(clean_non_utf, id_type, core_id_list, "publications/search", add_gen3_authz=add_gen3_authz)
 
     # Add related project_nums
+    print("Query NIH for projects (secondary search)")
     if (id_type == "appl_id") & return_related_project_nums:
         additional_id_list, additional_core_id_list = create_project_num_list_from_csv(
             filepath,
@@ -80,7 +79,6 @@ def main(args):
             "project_num",
             additional_id_list,
             add_gen3_authz=add_gen3_authz,
-            awarded_dict=awarded_dict,
         )
         for addl_result in additional_results:
             if str(addl_result["appl_id"]) not in id_list:
@@ -88,6 +86,32 @@ def main(args):
                     "_second_search_flag"
                 ] = 1  # To understand which we returned from our secondary search
                 results.append(addl_result)
+
+    # Append awards dict for summary and research focus area (from HEAL awards website TSV)
+    print("Append awards dict")
+    if awarded_dict:
+        for res_obj in results:
+            project_num = res_obj["project_num"]
+            is_parent_proj = not (res_obj["subproject_id"])
+            is_from_original_search = not bool("_second_search_flag" in res_obj)
+            if project_num in awarded_dict.keys() and (
+                is_parent_proj or is_from_original_search
+            ):
+                res_obj["summary"] = awarded_dict[project_num]["summary"]
+                res_obj["research_focus_area"] = awarded_dict[project_num][
+                    "research_focus_area"
+                ]
+            else:
+                res_obj["summary"] = res_obj["abstract_text"]
+
+    # Append MDS dict for Gen3 internal metadata fields (from HEAL MDS dump TSV)
+    print("Append MDS dict")
+    if mds_dict and mds_fields_to_copy:
+        for res_obj in results:
+            project_num = res_obj["project_num"]
+            if project_num in mds_dict.keys():
+                for field_title in mds_fields_to_copy:
+                    res_obj[field_title] = mds_dict[project_num][field_title]
 
     # Projects not in reporter
     projects_not_in_reporter = []
@@ -269,8 +293,6 @@ def post_request(
     end_point="projects/search",
     chunk_length=50,
     add_gen3_authz=False,
-    awarded_dict={},
-    mds_dict={},
 ):
     """
     post_request hits the NIH reporter API end point and returns a list of results.
@@ -339,22 +361,6 @@ def post_request(
                 res_obj[
                     "registration_authz"
                 ] = f"/study/{res_obj['appl_id']}"  # always use appl_id to create this
-
-        if awarded_dict:
-            for res_obj in results_obj:
-                project_num = res_obj["project_num"]
-                if project_num in awarded_dict.keys():
-                    res_obj["summary"] = awarded_dict[project_num]["summary"]
-                    res_obj["research_focus_area"] = awarded_dict[project_num][
-                        "research_focus_area"
-                    ]
-
-        if mds_dict and mds_fields_to_copy:
-            for res_obj in results_obj:
-                project_num = res_obj["project_num"]
-                if project_num in mds_dict.keys():
-                    for field_title in mds_fields_to_copy:
-                        res_obj[field_title] = mds_dict[project_num][field_title]
 
         # Extend list
         results_list.extend(results_obj)
