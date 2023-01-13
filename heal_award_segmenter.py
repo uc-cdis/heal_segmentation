@@ -109,9 +109,11 @@ def main(args):
     if mds_dict and mds_fields_to_copy:
         for res_obj in results:
             project_num = res_obj["project_num"]
-            if project_num in mds_dict.keys():
-                for field_title in mds_fields_to_copy:
+            for field_title in mds_fields_to_copy:
+                if project_num in mds_dict.keys():
                     res_obj[field_title] = mds_dict[project_num][field_title]
+                else:
+                    res_obj[field_title] = ""
 
     # Projects not in reporter
     projects_not_in_reporter = []
